@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { Pencil, Info, ExternalLink, ChevronRight, ChevronLeft, ChevronDown, X, Send, Search, Folder, Trash2, AlertTriangle, Sparkle, GripVertical, Plus, MessageCircle, ArrowUp, MessageSquare, FileText, HelpCircle } from 'lucide-react';
+import { Pencil, Info, ExternalLink, ChevronRight, ChevronLeft, ChevronDown, X, Send, Search, Folder, Trash2, AlertTriangle, AlertCircle, Sparkle, GripVertical, Plus, MessageCircle, ArrowUp, MessageSquare, FileText, HelpCircle } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import ReplaceIcon from '@/components/icons/ReplaceMediaIcon';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -535,20 +535,35 @@ const WelcomeMessage: React.FC<{ media: MediaFile | null; onMediaChange: (m: Med
       </p>
 
       <div className="mt-6">
-        <label className="text-base font-semibold text-text-primary">Welcome message text</label>
-        <div className="mt-2">
-          <RichTextEditor value={message} onChange={setMessage} defaultValue={initialMessage ?? DEFAULT_WELCOME} />
-        </div>
-        {plainLength(message).valueOf() === 0 ? (
-          <div className="mt-2 flex items-center gap-3 rounded-lg border border-[#f5c26b] bg-[#fef8f0] px-4 py-3">
-            <AlertTriangle className="h-4 w-4 shrink-0 text-[#b98217]" />
-            <p className="text-sm font-light text-text-secondary">
-              <span className="font-semibold text-text-primary">Can't leave blank</span>{' '}
-              Welcome message text is required.
-            </p>
-          </div>
-        ) : null}
-        <p className="mt-1 text-xs font-light text-text-muted">{plainLength(message)}/1000 characters</p>
+        {(() => {
+          const isBlank = plainLength(message) === 0;
+          return (
+            <>
+              <div className="flex items-baseline justify-between gap-4">
+                <label className="text-base font-semibold text-text-primary">
+                  Welcome message text {isBlank ? <span className="text-[#d91f11]">*</span> : null}
+                </label>
+                <span className={`text-xs font-light ${isBlank ? 'text-[#d91f11]' : 'text-text-muted'}`}>
+                  {plainLength(message)}/1000
+                </span>
+              </div>
+              <div className="mt-2">
+                <RichTextEditor
+                  value={message}
+                  onChange={setMessage}
+                  defaultValue={initialMessage ?? DEFAULT_WELCOME}
+                  className={isBlank ? 'border-[#d91f11] focus-within:border-[#d91f11]' : undefined}
+                />
+              </div>
+              {isBlank ? (
+                <div className="mt-2 flex items-center gap-2">
+                  <AlertCircle className="h-4 w-4 shrink-0 text-[#d91f11]" />
+                  <p className="text-sm font-light text-[#d91f11]">Can't leave blank.</p>
+                </div>
+              ) : null}
+            </>
+          );
+        })()}
       </div>
 
 
@@ -633,12 +648,12 @@ const WelcomeMessage: React.FC<{ media: MediaFile | null; onMediaChange: (m: Med
                   </SelectTrigger>
                   <SelectContent className="max-w-[440px]">
                     <SelectItem value="auto" className="py-3">
-                      <span className="block text-base font-light text-text-primary">Automatically adjust (recommended)</span>
-                      <span className="block text-sm font-light text-text-secondary">Images will responsively scale based on device size</span>
+                      <span className="block text-base font-light text-text-primary">Responsive (recommended)</span>
+                      <span className="block text-sm font-light text-text-secondary">Media fills the widget width and crops to a consistent height</span>
                     </SelectItem>
                     <SelectItem value="exact" className="py-3">
-                      <span className="block text-base font-light text-text-primary">Use exact width and height</span>
-                      <span className="block text-sm font-light text-text-secondary">Image will always be this size regardless of device size</span>
+                      <span className="block text-base font-light text-text-primary">Fixed</span>
+                      <span className="block text-sm font-light text-text-secondary">Media keeps its original proportions, so its height changes with the widget width</span>
                     </SelectItem>
                   </SelectContent>
                 </Select>
@@ -753,8 +768,9 @@ const ChatflowEdit: React.FC = () => {
         </div>
       ) : (
 
-      <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-[30%_minmax(0,1fr)] gap-10 px-8 max-w-[1600px] w-full">
-        <div className="min-w-0 overflow-y-auto py-10 pr-2">
+      <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-[42%_minmax(0,1fr)] gap-10 px-8 max-w-[1600px] w-full">
+        <div className="min-w-0 overflow-y-auto py-10 pr-12">
+
 
           {activeTab === 'Chat' ? (
             <>
