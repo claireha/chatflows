@@ -10,6 +10,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import noResultsImg from '@/assets/no-search-results.png';
 import hubspotQuestionsImg from '@/assets/hubspot-questions.png';
 import welcomeVideoUrl from '@/assets/welcome-video.mp4';
+import welcomeVideoPoster from '@/assets/welcome-video-poster.jpg';
 import welcomeGif from '@/assets/welcome-gif.gif';
 import { WidgetVideo } from '@/components/WidgetVideo';
 
@@ -360,7 +361,7 @@ const ChooseChatAvatar: React.FC = () => (
 
 const RECENT_FILES: MediaFile[] = [
   { id: 'f1', name: 'have-questions-banner.png', url: hubspotQuestionsImg, type: 'image' },
-  { id: 'f2', name: 'welcome-video.mp4', url: welcomeVideoUrl, type: 'video', poster: hubspotQuestionsImg },
+  { id: 'f2', name: 'welcome-video.mp4', url: welcomeVideoUrl, type: 'video', poster: welcomeVideoPoster },
   { id: 'f3', name: 'welcome-animation.gif', url: welcomeGif, type: 'image' },
 ];
 
