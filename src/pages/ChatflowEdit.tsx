@@ -8,9 +8,8 @@ import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import noResultsImg from '@/assets/no-search-results.png';
-import hubspotQuestionsAsset from '@/assets/hubspot-questions.png.asset.json';
-import welcomeVideoAsset from '@/assets/welcome-video.mp4.asset.json';
-import welcomeVideoPosterAsset from '@/assets/welcome-video-poster.jpg.asset.json';
+import hubspotQuestionsImg from '@/assets/hubspot-questions.png';
+import welcomeVideoUrl from '@/assets/welcome-video.mp4';
 import welcomeGif from '@/assets/welcome-gif.gif';
 import { WidgetVideo } from '@/components/WidgetVideo';
 
@@ -360,8 +359,8 @@ const ChooseChatAvatar: React.FC = () => (
 );
 
 const RECENT_FILES: MediaFile[] = [
-  { id: 'f1', name: 'have-questions-banner.png', url: hubspotQuestionsAsset.url, type: 'image' },
-  { id: 'f2', name: 'welcome-video.mp4', url: welcomeVideoAsset.url, type: 'video', poster: welcomeVideoPosterAsset.url },
+  { id: 'f1', name: 'have-questions-banner.png', url: hubspotQuestionsImg, type: 'image' },
+  { id: 'f2', name: 'welcome-video.mp4', url: welcomeVideoUrl, type: 'video', poster: hubspotQuestionsImg },
   { id: 'f3', name: 'welcome-animation.gif', url: welcomeGif, type: 'image' },
 ];
 
