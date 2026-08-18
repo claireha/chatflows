@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { Pencil, Info, ExternalLink, ChevronRight, ChevronLeft, ChevronDown, X, Send, Search, Folder, Trash2, AlertTriangle, AlertCircle, Sparkle, GripVertical, Plus, MessageCircle, ArrowUp, MessageSquare, FileText, HelpCircle } from 'lucide-react';
+import { Check, Pencil, Info, ExternalLink, ChevronRight, ChevronLeft, ChevronDown, X, Send, Search, Folder, Trash2, AlertTriangle, AlertCircle, Sparkle, GripVertical, Plus, MessageCircle, ArrowUp, MessageSquare, FileText, HelpCircle } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import ReplaceIcon from '@/components/icons/ReplaceMediaIcon';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -45,7 +45,7 @@ const autoQuickReplies = [
   'Can I see a quick product demo?',
 ];
 
-const QuickReplies: React.FC<{ replies: string[]; onChange: (r: string[]) => void; auto: boolean; onAutoChange: (v: boolean) => void }> = ({ replies, onChange, auto, onAutoChange }) => {
+const QuickReplies: React.FC<{ replies: string[]; onChange: (r: string[]) => void; auto: boolean; onAutoChange: (v: boolean) => void; aiLocked?: boolean }> = ({ replies, onChange, auto, onAutoChange, aiLocked }) => {
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [overIndex, setOverIndex] = useState<number | null>(null);
 
@@ -66,7 +66,7 @@ const QuickReplies: React.FC<{ replies: string[]; onChange: (r: string[]) => voi
   return (
     <div className="max-w-[760px]">
       <p className="text-sm font-light text-text-secondary">
-        These appear as clickable buttons in the chat interface. Adding a quick reply here will override AI generated suggestions.
+        These appear as clickable buttons in the chat interface. Adding a recommended prompt here will override AI generated suggestions.
       </p>
 
       <div className="mt-4 flex items-start justify-between gap-6 rounded-lg border border-border-primary p-5">
@@ -76,13 +76,30 @@ const QuickReplies: React.FC<{ replies: string[]; onChange: (r: string[]) => voi
             <Sparkle className="w-4 h-4 text-text-primary" />
           </div>
           <p className="mt-2 text-sm font-light text-text-secondary">
-            AI generates conversation starters from your training data. Quick replies you add will take priority.
+            AI generates conversation starters from your training data. Recommended prompts you add will take priority.
           </p>
         </div>
-        <Switch checked={auto} onCheckedChange={onAutoChange} />
+        {aiLocked ? (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="inline-flex shrink-0">
+                  <Switch checked={false} disabled onCheckedChange={onAutoChange} />
+                </span>
+              </TooltipTrigger>
+              <TooltipContent className="max-w-[260px] bg-[#141414] text-white border-transparent">
+                Auto-generated prompts require a Customer Agent assigned to this chatflow.
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        ) : (
+          <Switch checked={auto} onCheckedChange={onAutoChange} />
+        )}
       </div>
 
-      {!auto && (
+
+      {(aiLocked || !auto) && (
+
       <div className="mt-5 space-y-3">
         {replies.map((reply, i) => (
           <div
@@ -122,7 +139,7 @@ const QuickReplies: React.FC<{ replies: string[]; onChange: (r: string[]) => voi
             />
             <button
               type="button"
-              aria-label="Remove quick reply"
+              aria-label="Remove recommended prompt"
               onClick={() => onChange(replies.filter((_, idx) => idx !== i))}
               className="p-1 text-text-primary hover:text-text-secondary"
             >
@@ -139,7 +156,7 @@ const QuickReplies: React.FC<{ replies: string[]; onChange: (r: string[]) => voi
             onClick={() => onChange([...replies, ''])}
             className="flex-1 h-11 inline-flex items-center justify-center gap-2 rounded-full border border-border-secondary text-sm font-light text-text-primary hover:bg-surface-secondary transition-colors"
           >
-            <Plus className="w-4 h-4" /> Add quick reply
+            <Plus className="w-4 h-4" /> Add recommended prompt
           </button>
           <span className="w-6 shrink-0" />
         </div>
@@ -523,8 +540,12 @@ const SUPPORT_WELCOME = `<div>${HELLO_TOKEN} Got any questions? I'm happy to hel
 const plainLength = (html: string) =>
   html.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').length;
 
-const WelcomeMessage: React.FC<{ media: MediaFile | null; onMediaChange: (m: MediaFile | null) => void; mediaDisabled?: boolean; initialMessage?: string; mediaSize?: string; onMediaSizeChange?: (v: string) => void }> = ({ media, onMediaChange, mediaDisabled, initialMessage, mediaSize = 'auto', onMediaSizeChange }) => {
-  const [message, setMessage] = useState(initialMessage ?? DEFAULT_WELCOME);
+const WelcomeMessage: React.FC<{ media: MediaFile | null; onMediaChange: (m: MediaFile | null) => void; mediaDisabled?: boolean; initialMessage?: string; mediaSize?: string; onMediaSizeChange?: (v: string) => void; onMessageChange?: (v: string) => void }> = ({ media, onMediaChange, mediaDisabled, initialMessage, mediaSize = 'auto', onMediaSizeChange, onMessageChange }) => {
+  const [message, setMessageState] = useState(initialMessage ?? DEFAULT_WELCOME);
+  const setMessage = (v: string) => {
+    setMessageState(v);
+    onMessageChange?.(v);
+  };
   
   const [pickerOpen, setPickerOpen] = useState(false);
 
@@ -643,9 +664,19 @@ const WelcomeMessage: React.FC<{ media: MediaFile | null; onMediaChange: (m: Med
               <div className="mt-4 border-l-2 border-border-primary pl-4">
                 <span className="text-base font-semibold text-text-primary">Size</span>
                 <Select value={mediaSize} onValueChange={(v) => onMediaSizeChange?.(v)}>
-                  <SelectTrigger className="mt-2 h-auto w-full rounded-md border-border-secondary px-4 py-3 text-base font-light text-text-primary">
-                    <SelectValue />
+                  <SelectTrigger className="mt-2 h-auto w-full items-start rounded-md border-border-secondary px-4 py-3 text-left text-base font-light text-text-primary [&>span]:line-clamp-none [&>span]:whitespace-normal">
+                    <span className="block">
+                      <span className="block text-base font-light text-text-primary">
+                        {mediaSize === 'exact' ? 'Fixed' : 'Responsive (recommended)'}
+                      </span>
+                      <span className="block text-sm font-light text-text-secondary">
+                        {mediaSize === 'exact'
+                          ? 'Media keeps its original proportions, so its height changes with the widget width'
+                          : 'Media fills the widget width and crops to a consistent height'}
+                      </span>
+                    </span>
                   </SelectTrigger>
+
                   <SelectContent className="max-w-[440px]">
                     <SelectItem value="auto" className="py-3">
                       <span className="block text-base font-light text-text-primary">Responsive (recommended)</span>
@@ -703,6 +734,9 @@ const ChatflowEdit: React.FC = () => {
   const [kbEnabled, setKbEnabled] = useState(true);
   const [kbLibrary, setKbLibrary] = useState('help-center');
   const [kbRecommendations, setKbRecommendations] = useState('highest-rated');
+  const [welcomeText, setWelcomeText] = useState<string | null>(null);
+  const [resetKey, setResetKey] = useState(0);
+  const [justSaved, setJustSaved] = useState(false);
 
   useEffect(() => {
     setPreviewOpen(autoOpen.Desktop);
@@ -711,8 +745,62 @@ const ChatflowEdit: React.FC = () => {
     setPreviewWidth(null);
     setPreviewHeight(null);
   }, [launcher]);
-  const isBot = chatflowsData.find((c) => c.name === chatflowName)?.type === 'Bot';
+  const chatflowRow = chatflowsData.find((c) => c.name === chatflowName);
+  const isBot = chatflowRow?.type === 'Bot';
+  const hasAi = !!chatflowRow?.hasAiBadge;
   const isSupport = chatflowName === 'Support Chatflow';
+  const [assignType, setAssignType] = useState(hasAi ? 'Customer agent' : 'Specific users and teams');
+  const [assignOwner, setAssignOwner] = useState(hasAi ? 'Luma' : 'Claire');
+  useEffect(() => {
+    setAssignType(hasAi ? 'Customer agent' : 'Specific users and teams');
+    setAssignOwner(hasAi ? 'Luma' : 'Claire');
+  }, [chatflowName, hasAi]);
+  const agentAssigned = assignOwner === 'Luma';
+  useEffect(() => {
+    if (!agentAssigned) setAutoReplies(false);
+  }, [agentAssigned]);
+
+  // --- Unsaved changes tracking ---
+  const initialWelcome = isSupport ? SUPPORT_WELCOME : DEFAULT_WELCOME;
+  const settings = useMemo(
+    () => ({
+      enabled,
+      welcomeText: welcomeText ?? initialWelcome,
+      welcomeMedia: welcomeMedia?.name ?? null,
+      mediaSize,
+      autoOpenDesktop: autoOpen.Desktop,
+      autoOpenMobile: autoOpen.Mobile,
+      launcher,
+      replies: replies.join('|'),
+      autoReplies,
+      kbEnabled,
+      kbLibrary,
+      kbRecommendations,
+      assignType,
+      assignOwner,
+    }),
+    [enabled, welcomeText, initialWelcome, welcomeMedia, mediaSize, autoOpen, launcher, replies, autoReplies, kbEnabled, kbLibrary, kbRecommendations, assignType, assignOwner],
+  );
+  const baselineRef = useRef(settings);
+  const [baseline, setBaseline] = useState(settings);
+  const settingsRef = useRef(settings);
+  settingsRef.current = settings;
+  useEffect(() => {
+    setWelcomeText(null);
+    // wait for dependent effects (assignment / auto-prompt sync) to settle
+    const id = window.setTimeout(() => {
+      const next = { ...settingsRef.current, welcomeText: initialWelcome };
+      baselineRef.current = next;
+      setBaseline(next);
+    }, 250);
+    return () => window.clearTimeout(id);
+    // reset baseline when switching chatflow
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chatflowName]);
+  const changedKeys = (Object.keys(settings) as (keyof typeof settings)[]).filter(
+    (k) => settings[k] !== baseline[k],
+  );
+  const changedCount = changedKeys.length;
 
   return (
     <div className="h-screen overflow-hidden flex flex-col bg-background font-['Lexend_Deca']">
@@ -727,6 +815,12 @@ const ChatflowEdit: React.FC = () => {
           <Pencil className="w-4 h-4 text-white/70" />
         </div>
         <div className="flex items-center gap-3">
+          {justSaved && (
+            <span className="flex items-center gap-2 text-white text-sm font-semibold tracking-wide animate-fade-in">
+              SAVED
+              <Check className="w-4 h-4" strokeWidth={2.5} />
+            </span>
+          )}
           <button className="px-5 py-1.5 text-sm font-light bg-transparent text-white border border-white rounded-full hover:bg-white/10 transition-colors">
             Preview
           </button>
@@ -784,12 +878,12 @@ const ChatflowEdit: React.FC = () => {
                   <label className="text-sm font-semibold text-text-primary">Ticket assignment</label>
                   <Info className="w-3.5 h-3.5 text-text-muted" />
                 </div>
-                <select className="mt-2 w-full h-11 px-3 rounded border border-border-secondary bg-background text-sm font-light">
+                <select value={assignType} onChange={(e) => setAssignType(e.target.value)} className="mt-2 w-full h-11 px-3 rounded border border-border-secondary bg-background text-sm font-light">
                   <option>Customer agent</option>
                   <option>Specific users and teams</option>
                   <option>No one</option>
                 </select>
-                <select className="mt-3 w-full h-11 px-3 rounded border border-border-secondary bg-background text-sm font-light">
+                <select value={assignOwner} onChange={(e) => setAssignOwner(e.target.value)} className="mt-3 w-full h-11 px-3 rounded border border-border-secondary bg-background text-sm font-light">
                   <option>Luma</option>
                   <option>Claire</option>
                 </select>
@@ -810,11 +904,11 @@ const ChatflowEdit: React.FC = () => {
               </p>
               <div className="mt-4 border-t border-border-primary">
                 <AccordionRow label="Welcome message">
-                  <WelcomeMessage key={chatflowName} media={isBot ? null : welcomeMedia} onMediaChange={setWelcomeMedia} mediaDisabled={isBot} initialMessage={isSupport ? SUPPORT_WELCOME : DEFAULT_WELCOME} mediaSize={mediaSize} onMediaSizeChange={setMediaSize} />
+                  <WelcomeMessage key={`${chatflowName}-${resetKey}`} media={isBot ? null : welcomeMedia} onMediaChange={setWelcomeMedia} mediaDisabled={isBot} initialMessage={welcomeText ?? initialWelcome} mediaSize={mediaSize} onMediaSizeChange={setMediaSize} onMessageChange={setWelcomeText} />
                 </AccordionRow>
                 {!isBot && (
-                  <AccordionRow label="Quick replies">
-                    <QuickReplies replies={replies} onChange={setReplies} auto={autoReplies} onAutoChange={setAutoReplies} />
+                  <AccordionRow label="Recommended prompts">
+                    <QuickReplies replies={replies} onChange={setReplies} auto={autoReplies} onAutoChange={setAutoReplies} aiLocked={!agentAssigned} />
                   </AccordionRow>
                 )}
 
@@ -1074,9 +1168,9 @@ const ChatflowEdit: React.FC = () => {
                   )}
                 </div>
 
-                {/* Quick replies */}
+                {/* Recommended prompts */}
                 <div className="mt-4 flex flex-col items-start gap-2">
-                  {(isBot ? [] : autoReplies ? autoQuickReplies : replies).filter(Boolean).map((s, i) => (
+                  {(isBot ? [] : agentAssigned && autoReplies ? autoQuickReplies : replies).filter(Boolean).map((s, i) => (
 
                     <button
                       key={`${s}-${i}`}
@@ -1137,6 +1231,48 @@ const ChatflowEdit: React.FC = () => {
         </div>
         </div>
       </div>
+      )}
+
+      {changedCount > 0 && (
+        <div className="shrink-0 border-t border-border-primary bg-background px-8 py-4 flex items-center gap-4">
+          <button
+            type="button"
+            onClick={() => {
+              setBaseline(settings);
+              setJustSaved(true);
+              window.setTimeout(() => setJustSaved(false), 2500);
+            }}
+            className="px-6 py-2 rounded-full bg-[#006162] text-white text-sm font-semibold hover:opacity-90 transition-opacity"
+          >
+            Save
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              const b = baseline;
+              setEnabled(b.enabled);
+              setMediaSize(b.mediaSize);
+              setAutoOpen({ Desktop: b.autoOpenDesktop, Mobile: b.autoOpenMobile });
+              setLauncher(b.launcher);
+              setReplies(b.replies ? b.replies.split('|') : []);
+              setAutoReplies(b.autoReplies);
+              setKbEnabled(b.kbEnabled);
+              setKbLibrary(b.kbLibrary);
+              setKbRecommendations(b.kbRecommendations);
+              setAssignType(b.assignType);
+              setAssignOwner(b.assignOwner);
+              if (!b.welcomeMedia) setWelcomeMedia(null);
+              setWelcomeText(b.welcomeText);
+              setResetKey((k) => k + 1);
+            }}
+            className="px-6 py-2 rounded-full border border-border-secondary bg-background text-sm font-semibold text-text-primary hover:bg-surface-secondary transition-colors"
+          >
+            Cancel
+          </button>
+          <span className="text-sm font-light text-text-secondary">
+            You've changed {changedCount} setting{changedCount === 1 ? '' : 's'}.
+          </span>
+        </div>
       )}
     </div>
   );
